@@ -3,57 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BagiBayar Fix | Per Item</title>
+    <title>BagiBayar Satuan | Fix Logic</title>
     <style>
         :root { --p: #4f46e5; --s: #10b981; --d: #ef4444; --dark: #1e293b; }
-        body { font-family: system-ui, sans-serif; background: #f3f4f6; padding: 20px; display: flex; justify-content: center; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; padding: 20px; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; }
         .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
         .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
-        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
-        button { border: none; border-radius: 8px; padding: 10px; font-weight: bold; cursor: pointer; color: white; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; outline: none; }
+        input:focus { border-color: var(--p); }
+        button { border: none; border-radius: 8px; padding: 10px 15px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
         .btn-p { background: var(--p); }
-        .btn-s { background: var(--s); width: 100%; }
-        .btn-del { background: none; color: var(--d); padding: 0; }
-        .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
-        .chip { padding: 5px 12px; border: 2px solid var(--p); border-radius: 20px; font-size: 0.8rem; cursor: pointer; color: var(--p); }
+        .btn-s { background: var(--s); width: 100%; margin-top: 5px; }
+        .btn-del { background: none; color: var(--d); padding: 0; font-size: 0.8rem; }
+        
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .chip { 
+            padding: 6px 14px; border: 2px solid var(--p); border-radius: 20px; 
+            font-size: 0.85rem; cursor: pointer; color: var(--p); font-weight: 500;
+        }
         .chip.active { background: var(--p); color: white; }
-        .item-card { border-left: 5px solid var(--s); position: relative; }
+
+        .item-card { border-left: 6px solid var(--s); }
+        .item-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        
         .result { background: var(--dark); color: white; }
-        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155; }
-        .tax-info { font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px; }
+        .row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #334155; }
+        .row:last-child { border: none; }
+        h3 { margin: 0 0 15px 0; font-size: 1.1rem; color: #374151; }
+        .result h3 { color: white; border-bottom: 1px solid #334155; padding-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="card">
-        <h3>1. Tambah Orang</h3>
+        <h3>1. Tambah Teman</h3>
         <div class="input-row">
-            <input type="text" id="pName" placeholder="Nama...">
+            <input type="text" id="pName" placeholder="Nama teman...">
             <button class="btn-p" onclick="addP()">Tambah</button>
         </div>
         <div id="pList" class="chips"></div>
     </div>
 
     <div class="card">
-        <h3>2. Tambah Makanan</h3>
+        <h3>2. Tambah Daftar Menu</h3>
         <div class="input-row">
-            <input type="text" id="iName" placeholder="Menu">
-            <input type="number" id="iPrice" placeholder="Harga">
+            <input type="text" id="iName" placeholder="Nama Makanan (X, Y, Z)">
+            <input type="number" id="iPrice" placeholder="Harga Satuan">
         </div>
-        <button class="btn-s" onclick="addI()">Tambah Menu</button>
-    </div>
-
-    <div class="card" style="padding: 10px 20px;">
-        <label style="font-size: 0.8rem;">Pajak & Service (%)</label>
-        <input type="number" id="taxPerc" value="0" oninput="render()" style="padding: 5px; width: 50px; margin-left: 10px;">
+        <button class="btn-s" onclick="addI()">Simpan Menu</button>
     </div>
 
     <div id="itemsBox"></div>
 
     <div id="final" class="card result" style="display:none;">
-        <h3>Ringkasan Patungan</h3>
+        <h3>Ringkasan Pembayaran</h3>
         <div id="resBox"></div>
     </div>
 </div>
@@ -64,73 +69,106 @@
 
     function addP() {
         const inp = document.getElementById('pName');
-        if (inp.value.trim()) { people.push(inp.value.trim()); inp.value = ''; render(); }
+        const val = inp.value.trim();
+        if (val && !people.includes(val)) {
+            people.push(val);
+            inp.value = '';
+            render();
+        }
     }
 
     function addI() {
         const n = document.getElementById('iName');
         const p = document.getElementById('iPrice');
         if (n.value && p.value) {
-            items.push({ id: Date.now(), name: n.value, price: parseFloat(p.value), users: [] });
-            n.value = ''; p.value = ''; render();
+            items.push({ 
+                id: Date.now(), 
+                name: n.value, 
+                price: parseFloat(p.value), 
+                selectedBy: [] // Menyimpan siapa saja yang pesan ini
+            });
+            n.value = ''; p.value = '';
+            render();
         }
     }
 
-    function toggle(itemId, person) {
+    function toggleSelection(itemId, personName) {
         const item = items.find(i => i.id === itemId);
-        const idx = item.users.indexOf(person);
-        if (idx > -1) item.users.splice(idx, 1);
-        else item.users.push(person);
+        const index = item.selectedBy.indexOf(personName);
+        
+        if (index > -1) {
+            // Jika sudah ada, hapus (batal pesan)
+            item.selectedBy.splice(index, 1);
+        } else {
+            // Jika belum ada, tambahkan (pesan)
+            item.selectedBy.push(personName);
+        }
         render();
     }
 
-    function delI(id) { items = items.filter(i => i.id !== id); render(); }
+    function delI(id) {
+        items = items.filter(i => i.id !== id);
+        render();
+    }
 
     function render() {
-        // Render People Chips
-        document.getElementById('pList').innerHTML = people.map(p => `<div class="chip active">${p}</div>`).join('');
+        // Tampilkan daftar orang di atas
+        document.getElementById('pList').innerHTML = people.map(p => `
+            <div class="chip active">${p}</div>
+        `).join('');
 
-        // Render Items
-        document.getElementById('itemsBox').innerHTML = items.map(item => `
+        // Tampilkan daftar menu
+        const itemsBox = document.getElementById('itemsBox');
+        itemsBox.innerHTML = items.map(item => `
             <div class="card item-card">
-                <div style="display:flex; justify-content:space-between">
-                    <strong>${item.name} - Rp ${item.price.toLocaleString()}</strong>
+                <div class="item-info">
+                    <div>
+                        <strong>${item.name}</strong><br>
+                        <small>Harga: Rp ${item.price.toLocaleString('id-ID')}</small>
+                    </div>
                     <button class="btn-del" onclick="delI(${item.id})">Hapus</button>
                 </div>
                 <div class="chips">
                     ${people.map(p => `
-                        <div class="chip ${item.users.includes(p) ? 'active' : ''}" onclick="toggle(${item.id}, '${p}')">${p}</div>
+                        <div class="chip ${item.selectedBy.includes(p) ? 'active' : ''}" 
+                             onclick="toggleSelection(${item.id}, '${p}')">
+                            ${p}
+                        </div>
                     `).join('')}
                 </div>
             </div>
         `).join('');
 
-        // Kalkulasi
-        const tax = parseFloat(document.getElementById('taxPerc').value) / 100;
+        // HITUNG LOGIKA SATUAN
         const totals = {};
         people.forEach(p => totals[p] = 0);
 
         items.forEach(item => {
-            // PERBAIKAN: Hanya bagi harga jika ada orang yang dipilih
-            if (item.users.length > 0) {
-                const pricePerPerson = item.price / item.users.length;
-                item.users.forEach(u => {
-                    // Tambahkan harga menu + pajak proporsional
-                    totals[u] += pricePerPerson + (pricePerPerson * tax);
-                });
-            }
+            // Setiap orang yang memilih item ini, membayar HARGA PENUH item tersebut
+            item.selectedBy.forEach(person => {
+                if (totals.hasOwnProperty(person)) {
+                    totals[person] += item.price;
+                }
+            });
         });
 
+        // Tampilkan Hasil
         const resBox = document.getElementById('resBox');
         resBox.innerHTML = '';
-        let has = false;
-        for (const [name, amt] of Object.entries(totals)) {
-            if (amt > 0) {
-                has = true;
-                resBox.innerHTML += `<div class="row"><span>${name}</span><strong>Rp ${Math.round(amt).toLocaleString()}</strong></div>`;
+        let hasData = false;
+
+        for (const [name, totalAmount] of Object.entries(totals)) {
+            if (totalAmount > 0) {
+                hasData = true;
+                resBox.innerHTML += `
+                    <div class="row">
+                        <span>${name}</span>
+                        <strong>Rp ${totalAmount.toLocaleString('id-ID')}</strong>
+                    </div>
+                `;
             }
         }
-        document.getElementById('final').style.display = has ? 'block' : 'none';
+        document.getElementById('final').style.display = hasData ? 'block' : 'none';
     }
 </script>
 </body>
