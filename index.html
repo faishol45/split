@@ -3,91 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BagiBayar Ultra | Fix Calculation</title>
+    <title>BagiBayar Fix | Per Item</title>
     <style>
-        :root {
-            --primary: #4f46e5;
-            --primary-light: #eef2ff;
-            --danger: #ef4444;
-            --success: #10b981;
-            --dark: #1e293b;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background-color: #f3f4f6;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-        }
-
+        :root { --p: #4f46e5; --s: #10b981; --d: #ef4444; --dark: #1e293b; }
+        body { font-family: system-ui, sans-serif; background: #f3f4f6; padding: 20px; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; }
-
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-            margin-bottom: 15px;
-        }
-
-        .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        input { flex: 1; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; }
-        
-        button { 
-            padding: 10px 15px; border-radius: 8px; border: none; 
-            font-weight: bold; cursor: pointer; color: white;
-        }
-        .btn-add { background: var(--primary); }
-        .btn-item { background: var(--success); width: 100%; }
-        .btn-del { background: none; color: var(--danger); padding: 0; }
-
-        .name-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-        .chip {
-            padding: 6px 14px; border: 2px solid var(--primary); border-radius: 20px;
-            cursor: pointer; font-size: 0.85rem; transition: 0.2s;
-        }
-        .chip.active { background: var(--primary); color: white; }
-
-        .item-card { border-left: 5px solid var(--success); }
-        .item-header { display: flex; justify-content: space-between; align-items: flex-start; }
-
-        .result-card { background: var(--dark); color: white; }
-        .total-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #334155; }
-        
-        h1 { text-align: center; color: var(--primary); }
-        h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        button { border: none; border-radius: 8px; padding: 10px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-p { background: var(--p); }
+        .btn-s { background: var(--s); width: 100%; }
+        .btn-del { background: none; color: var(--d); padding: 0; }
+        .chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
+        .chip { padding: 5px 12px; border: 2px solid var(--p); border-radius: 20px; font-size: 0.8rem; cursor: pointer; color: var(--p); }
+        .chip.active { background: var(--p); color: white; }
+        .item-card { border-left: 5px solid var(--s); position: relative; }
+        .result { background: var(--dark); color: white; }
+        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155; }
+        .tax-info { font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>BagiBayar Pro</h1>
-    
     <div class="card">
-        <h3>1. Siapa yang bayar?</h3>
+        <h3>1. Tambah Orang</h3>
         <div class="input-row">
-            <input type="text" id="personName" placeholder="Nama teman...">
-            <button class="btn-add" onclick="addPerson()">Tambah</button>
+            <input type="text" id="pName" placeholder="Nama...">
+            <button class="btn-p" onclick="addP()">Tambah</button>
         </div>
-        <div id="peopleList" class="name-chips"></div>
+        <div id="pList" class="chips"></div>
     </div>
 
     <div class="card">
-        <h3>2. Detail Tagihan</h3>
+        <h3>2. Tambah Makanan</h3>
         <div class="input-row">
-            <input type="text" id="itemName" placeholder="Nama menu">
-            <input type="number" id="itemPrice" placeholder="Harga">
+            <input type="text" id="iName" placeholder="Menu">
+            <input type="number" id="iPrice" placeholder="Harga">
         </div>
-        <button class="btn-item" onclick="addItem()">Tambah Item</button>
+        <button class="btn-s" onclick="addI()">Tambah Menu</button>
     </div>
 
-    <div id="itemsContainer"></div>
+    <div class="card" style="padding: 10px 20px;">
+        <label style="font-size: 0.8rem;">Pajak & Service (%)</label>
+        <input type="number" id="taxPerc" value="0" oninput="render()" style="padding: 5px; width: 50px; margin-left: 10px;">
+    </div>
 
-    <div id="finalResult" class="card result-card" style="display:none;">
+    <div id="itemsBox"></div>
+
+    <div id="final" class="card result" style="display:none;">
         <h3>Ringkasan Patungan</h3>
-        <div id="individualTotals"></div>
+        <div id="resBox"></div>
     </div>
 </div>
 
@@ -95,106 +62,75 @@
     let people = [];
     let items = [];
 
-    function addPerson() {
-        const input = document.getElementById('personName');
-        const name = input.value.trim();
-        if (name && !people.includes(name)) {
-            people.push(name);
-            input.value = '';
-            render();
+    function addP() {
+        const inp = document.getElementById('pName');
+        if (inp.value.trim()) { people.push(inp.value.trim()); inp.value = ''; render(); }
+    }
+
+    function addI() {
+        const n = document.getElementById('iName');
+        const p = document.getElementById('iPrice');
+        if (n.value && p.value) {
+            items.push({ id: Date.now(), name: n.value, price: parseFloat(p.value), users: [] });
+            n.value = ''; p.value = ''; render();
         }
     }
 
-    function addItem() {
-        const nameIn = document.getElementById('itemName');
-        const priceIn = document.getElementById('itemPrice');
-        if (!nameIn.value || !priceIn.value) return;
-
-        items.push({
-            id: Date.now(),
-            name: nameIn.value,
-            price: parseFloat(priceIn.value),
-            sharedBy: []
-        });
-
-        nameIn.value = '';
-        priceIn.value = '';
-        render();
-    }
-
-    function toggleFriend(itemId, person) {
+    function toggle(itemId, person) {
         const item = items.find(i => i.id === itemId);
-        const index = item.sharedBy.indexOf(person);
-        if (index > -1) {
-            item.sharedBy.splice(index, 1);
-        } else {
-            item.sharedBy.push(person);
-        }
+        const idx = item.users.indexOf(person);
+        if (idx > -1) item.users.splice(idx, 1);
+        else item.users.push(person);
         render();
     }
 
-    function deleteItem(id) {
-        items = items.filter(i => i.id !== id);
-        render();
-    }
+    function delI(id) { items = items.filter(i => i.id !== id); render(); }
 
     function render() {
-        // Render People
-        document.getElementById('peopleList').innerHTML = people.map(p => `
-            <div class="chip active">${p}</div>
-        `).join('');
+        // Render People Chips
+        document.getElementById('pList').innerHTML = people.map(p => `<div class="chip active">${p}</div>`).join('');
 
         // Render Items
-        document.getElementById('itemsContainer').innerHTML = items.map(item => `
+        document.getElementById('itemsBox').innerHTML = items.map(item => `
             <div class="card item-card">
-                <div class="item-header">
-                    <div>
-                        <strong>${item.name}</strong><br>
-                        <span>Rp ${item.price.toLocaleString('id-ID')}</span>
-                    </div>
-                    <button class="btn-del" onclick="deleteItem(${item.id})">Hapus</button>
+                <div style="display:flex; justify-content:space-between">
+                    <strong>${item.name} - Rp ${item.price.toLocaleString()}</strong>
+                    <button class="btn-del" onclick="delI(${item.id})">Hapus</button>
                 </div>
-                <div class="name-chips">
+                <div class="chips">
                     ${people.map(p => `
-                        <div class="chip ${item.sharedBy.includes(p) ? 'active' : ''}" 
-                             onclick="toggleFriend(${item.id}, '${p}')">
-                            ${p}
-                        </div>
+                        <div class="chip ${item.users.includes(p) ? 'active' : ''}" onclick="toggle(${item.id}, '${p}')">${p}</div>
                     `).join('')}
                 </div>
             </div>
         `).join('');
 
-        // Calculate Totals
+        // Kalkulasi
+        const tax = parseFloat(document.getElementById('taxPerc').value) / 100;
         const totals = {};
         people.forEach(p => totals[p] = 0);
 
         items.forEach(item => {
-            if (item.sharedBy.length > 0) {
-                const portion = item.price / item.sharedBy.length;
-                item.sharedBy.forEach(p => {
-                    totals[p] += portion;
+            // PERBAIKAN: Hanya bagi harga jika ada orang yang dipilih
+            if (item.users.length > 0) {
+                const pricePerPerson = item.price / item.users.length;
+                item.users.forEach(u => {
+                    // Tambahkan harga menu + pajak proporsional
+                    totals[u] += pricePerPerson + (pricePerPerson * tax);
                 });
             }
         });
 
-        // Render Summary
-        const summaryCont = document.getElementById('individualTotals');
-        summaryCont.innerHTML = '';
-        let hasData = false;
-
-        for (const [name, amount] of Object.entries(totals)) {
-            if (amount > 0) {
-                hasData = true;
-                summaryCont.innerHTML += `
-                    <div class="total-row">
-                        <span>${name}</span>
-                        <strong>Rp ${Math.round(amount).toLocaleString('id-ID')}</strong>
-                    </div>
-                `;
+        const resBox = document.getElementById('resBox');
+        resBox.innerHTML = '';
+        let has = false;
+        for (const [name, amt] of Object.entries(totals)) {
+            if (amt > 0) {
+                has = true;
+                resBox.innerHTML += `<div class="row"><span>${name}</span><strong>Rp ${Math.round(amt).toLocaleString()}</strong></div>`;
             }
         }
-        document.getElementById('finalResult').style.display = hasData ? 'block' : 'none';
+        document.getElementById('final').style.display = has ? 'block' : 'none';
     }
 </script>
 </body>
